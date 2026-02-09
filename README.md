@@ -35,7 +35,7 @@ pip install /path/to/prompt-to-image
 
 **Option 2: Install from Git repository**
 ```bash
-pip install git+https://github.com/company/prompt-to-image.git
+pip install git+https://github.com/AI-Buddy-Catalyst-Labs/PromptToImage-optimized.git
 ```
 
 **Option 3: Install from built wheel**

@@ -19,8 +19,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/company/prompt-to-image"
-Repository = "https://github.com/company/prompt-to-image.git"
+Homepage = "https://github.com/AI-Buddy-Catalyst-Labs/PromptToImage-optimized"
+Repository = "https://github.com/AI-Buddy-Catalyst-Labs/PromptToImage-optimized.git"
 
 [project.scripts]
 prompt-to-image = "prompt_to_image.__main__:main"
