@@ -27,6 +27,8 @@ pip install -e .
 Choose one of the following methods:
 
 **Option 1: Install from local directory**
+
+clone the repository then install:
 ```bash
 pip install /path/to/prompt-to-image
 ```
@@ -37,6 +39,7 @@ pip install git+https://github.com/company/prompt-to-image.git
 ```
 
 **Option 3: Install from built wheel**
+clone the repository, build the wheel, then install:
 ```bash
 # First build the wheel (run by package maintainer)
 python -m build
