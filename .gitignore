@@ -1,0 +1,8 @@
+*.txt
+*.png
+*.md
+__pycache__/
+*.egg-info/
+!AGENTS.md
+!README.md
+!requirements.txt

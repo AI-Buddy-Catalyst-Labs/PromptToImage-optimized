@@ -1,0 +1,2 @@
+include README.md
+recursive-include src/prompt_to_image/fonts *.ttf
