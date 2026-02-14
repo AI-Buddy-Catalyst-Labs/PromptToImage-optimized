@@ -114,6 +114,39 @@ prompt-to-image sample.md 12 800
 
 **Output:** `sample.png` - A formatted PNG image with wrapped text, ready for use with vision-language models.
 
+## Updating
+
+To update to the latest version, follow the same installation method you originally used:
+
+### If installed from Git repository:
+
+```bash
+# Reinstall from the latest version
+pip install --upgrade --force-reinstall git+https://github.com/AI-Buddy-Catalyst-Labs/PromptToImage-optimized.git
+
+# Or install specific version/tag
+pip install --upgrade --force-reinstall git+https://github.com/AI-Buddy-Catalyst-Labs/PromptToImage-optimized.git@v1.0.0
+```
+
+### If installed from local directory or wheel:
+
+```bash
+# First uninstall the current version
+pip uninstall prompt-to-image
+
+# Then pull the latest code and reinstall
+pip install /path/to/prompt-to-image
+
+# Or install the new wheel
+pip install dist/prompt_to_image-1.0.0-py3-none-any.whl
+```
+
+### Check installed version:
+
+```bash
+pip show prompt-to-image
+```
+
 ## Features
 
 - **Multiple Input Formats:** Supports both `.md` and `.txt` files
