@@ -26,16 +26,17 @@ pip install -e .
 
 Choose one of the following methods:
 
-**Option 1: Install from local directory**
+**Option 1: Install from Git repository**
+
+```bash
+pip install git+https://github.com/AI-Buddy-Catalyst-Labs/PromptToImage-optimized.git
+```
+
+**Option 2: Install from local directory**
 
 clone the repository then install:
 ```bash
 pip install /path/to/prompt-to-image
-```
-
-**Option 2: Install from Git repository**
-```bash
-pip install git+https://github.com/AI-Buddy-Catalyst-Labs/PromptToImage-optimized.git
 ```
 
 **Option 3: Install from built wheel**

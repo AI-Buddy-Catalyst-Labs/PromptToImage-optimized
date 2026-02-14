@@ -6,6 +6,7 @@ import os
 import math
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
+import pymupdf
 
 # Python 3.9+: use stdlib, Python 3.8: use importlib_resources backport
 try:
@@ -18,7 +19,7 @@ SPACING = 2
 TEXT_OFFSET = 1
 BG_COLOR = "#FFFFFF"
 TEXT_COLOR = "#000000"
-VALID_EXTENSIONS = [".md", ".txt"]
+VALID_EXTENSIONS = [".md", ".txt", ".pdf"]
 DEFAULT_FONT_SIZE = 14
 DEFAULT_IMAGE_WIDTH = 500
 
@@ -51,7 +52,7 @@ def validate_file_path(file_path: str) -> tuple[bool, str | None]:
     if file_ext not in VALID_EXTENSIONS:
         return (
             False,
-            f"Invalid file type: {file_ext}. Only .md and .txt files are supported.",
+            f"Invalid file type: {file_ext}. Only .md, .txt, and .pdf files are supported.",
         )
 
     return True, None
@@ -62,7 +63,7 @@ def get_input_file() -> str:
     while True:
         try:
             file_path = input(
-                "\nEnter a valid .md or .txt file (or 'quit' to exit): "
+                "\nEnter a valid .md, .txt, or .pdf file (or 'quit' to exit): "
             ).strip()
 
             if file_path.lower() in ("quit", "exit", "q"):
@@ -240,6 +241,28 @@ def save_image(image: Image.Image, output_path: str) -> None:
         raise Exception(f"Failed to save image: {e}")
 
 
+def render_pdf_pages(file_path: str, max_width: int, output_folder: str) -> None:
+    """Render each PDF page as PNG, resizing to max_width if needed. Scaling preserves aspect ratio - no content is cropped.
+    """
+    os.makedirs(output_folder, exist_ok=True)
+    doc = pymupdf.open(file_path)
+    page_count = len(doc)
+
+    print(f"Found {page_count} page(s) in PDF.")
+
+    for page in doc:
+        page_width = page.rect.width
+        zoom = min(1.0, max_width / page_width)
+
+        mat = pymupdf.Matrix(zoom, zoom)
+        pix = page.get_pixmap(matrix=mat)
+
+        output_path = os.path.join(output_folder, f"page_{page.number + 1}.png")
+        pix.save(output_path)
+
+    doc.close()
+
+
 def main() -> None:
     """Main entry point for the CLI tool."""
     if len(sys.argv) >= 2:
@@ -248,22 +271,9 @@ def main() -> None:
         if not is_valid:
             print_error(error_msg)
             sys.exit(1)
-        print("Converting text/markdown files to PNG images.")
+        print("Converting text/markdown/PDF files to PNG images.")
     else:
         input_file = get_input_file()
-
-    try:
-        lines = read_text_file(input_file)
-    except Exception as e:
-        print_error(str(e))
-        sys.exit(1)
-
-    if not lines:
-        print_error("File is empty or contains only whitespace.")
-        sys.exit(1)
-
-    print(f"\nProcessing: {input_file}")
-    print(f"Found {len(lines)} non-empty lines.")
 
     if len(sys.argv) >= 4:
         try:
@@ -297,6 +307,33 @@ def main() -> None:
             output_file += ".png"
     else:
         output_file = os.path.splitext(input_file)[0] + ".png"
+
+    file_ext = os.path.splitext(input_file)[1].lower()
+
+    if file_ext == ".pdf":
+        output_folder = os.path.splitext(output_file)[0]
+        print(f"\nProcessing: {input_file}")
+        print(f"Using max width: {image_width}px")
+        try:
+            render_pdf_pages(input_file, image_width, output_folder)
+            print(f"\nSuccess! Pages saved to: {output_folder}/")
+        except Exception as e:
+            print_error(str(e))
+            sys.exit(1)
+        sys.exit(0)
+
+    try:
+        lines = read_text_file(input_file)
+    except Exception as e:
+        print_error(str(e))
+        sys.exit(1)
+
+    if not lines:
+        print_error("File is empty or contains only whitespace.")
+        sys.exit(1)
+
+    print(f"\nProcessing: {input_file}")
+    print(f"Found {len(lines)} non-empty lines.")
 
     # Validate font availability (silent on success)
     try:
