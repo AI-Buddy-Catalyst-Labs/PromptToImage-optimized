@@ -1,6 +1,7 @@
 *.txt
 *.png
 *.md
+.ruff_cache/
 __pycache__/
 *.egg-info/
 !AGENTS.md

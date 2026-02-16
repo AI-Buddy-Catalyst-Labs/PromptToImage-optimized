@@ -3,10 +3,9 @@
 This is a Python CLI tool that converts text/markdown files to PNG images using Pillow.
 ## Project Structure
 
-- `text_to_image.py` - Main CLI entry point with all core functions
-- `requirements.txt` - Python dependencies
-- `fonts/` - Directory for optional Book Antiqua font (user-provided)
-  - `fonts/bookantiqua.ttf` - Optional font file for improved OCR accuracy
+- `src/prompt_to_image/__main__.py` - Main CLI entry point
+- `src/prompt_to_image/__init__.py` - Package init
+- `pyproject.toml` - Package configuration
 
 ## Build/Install/Run Commands
 
@@ -112,34 +111,11 @@ python text_to_image.py
 
 ## Common Patterns
 
-### Font Loading with Fallback
+### Font Loading
 ```python
-# Tier 1: Try project fonts/bookantiqua.ttf
-if FONT_FILE.exists():
-    try:
-        font = ImageFont.truetype(str(FONT_FILE), font_size)
-        return font
-    except (OSError, IOError):
-        pass
-
-# Tier 2: Try OS-installed Book Antiqua (cross-platform)
-book_antiqua_names = [
-    "Book Antiqua",
-    "BookAntiqua",
-    "Book Antiqua Regular",
-    "BkAntiqua",
-]
-
-for font_name in book_antiqua_names:
-    try:
-        font = ImageFont.truetype(font_name, font_size)
-        return font
-    except OSError:
-        continue
-
-# Tier 3: Fall back to Pillow default
-print("Warning: Using Pillow default font (Book Antiqua not found in project or system)", file=sys.stderr)
-font = ImageFont.load_default(size=font_size)
+def load_font_with_fallback(font_size: int) -> ImageFont.ImageFont:
+    """Load Pillow default system font."""
+    return ImageFont.load_default(size=font_size)
 ```
 
 ### Text Measurement (Modern Pillow APIs)

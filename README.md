@@ -9,7 +9,7 @@ PromptToImage transforms your text content into visual representations, enabling
 - Reducing token count while preserving context
 - Converting documentation into image format for multimodal AI workflows
 
-**Font:** Book Antiqua is bundled with the package for improved OCR accuracy. Falls back to system default if unavailable.
+**Font:** Uses Pillow's default system font for text rendering.
 
 ## Installation
 
@@ -52,7 +52,7 @@ pip install dist/prompt_to_image-1.0.0-py3-none-any.whl
 **Requirements:**
 - Python 3.8 or higher
 - Pillow >= 12.0.0
-- Book Antiqua font is bundled with the package (optional to add your own)
+- Pillow library for image generation
 
 ## Usage
 
@@ -154,17 +154,16 @@ pip show prompt-to-image
 - **Smart Word Wrapping:** Automatically wraps text to fit specified dimensions
 - **Empty Line Removal:** Removes empty lines to reduce whitespace in the output image
 - **Encoding Support:** UTF-8 with Latin-1 fallback for broad compatibility
-- **Font Handling:** Bundled Book Antiqua font with fallback to system default
+- **Font Handling:** Uses Pillow default system font
 - **Dual Modes:** Both command-line and interactive interfaces
 - **Error Handling:** Comprehensive validation and graceful error messages
 
 ## Architecture
 
 - **src/prompt_to_image/__main__.py**: Main CLI entry point
-- **src/prompt_to_image/fonts/**: Bundled Book Antiqua font file
+- **src/prompt_to_image/**: Main package directory
 - **pyproject.toml**: Package configuration
 - Uses modern Pillow APIs (12.0.0+) for accurate text measurement
-- Uses importlib.resources for cross-platform package data access
 
 ## Development
 

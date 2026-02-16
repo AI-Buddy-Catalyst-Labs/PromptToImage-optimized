@@ -8,12 +8,6 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 import pymupdf
 
-# Python 3.9+: use stdlib, Python 3.8: use importlib_resources backport
-try:
-    from importlib.resources import files
-except ImportError:
-    from importlib_resources import files
-
 MARGIN = 2
 SPACING = 2
 TEXT_OFFSET = 1
@@ -22,12 +16,6 @@ TEXT_COLOR = "#000000"
 VALID_EXTENSIONS = [".md", ".txt", ".pdf"]
 DEFAULT_FONT_SIZE = 14
 DEFAULT_IMAGE_WIDTH = 500
-
-
-def get_font_path():
-    """Get path to bundled Book Antiqua font using importlib.resources."""
-    font_dir = files("prompt_to_image.fonts")
-    return font_dir.joinpath("bookantiqua.ttf")
 
 
 def print_error(message: str | None) -> None:
@@ -125,47 +113,14 @@ def get_numeric_input(
 
 def load_font_with_fallback(
     font_size: int,
-) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    """Load Book Antiqua from package resources, OS installation, or Pillow default."""
-
-    # Tier 1: Try bundled font from package resources
-    try:
-        import io
-
-        font_path = get_font_path()
-        with font_path.open("rb") as f:
-            font_data = f.read()
-        font = ImageFont.truetype(io.BytesIO(font_data), font_size)
-        return font
-    except Exception:
-        pass
-
-    # Tier 2: Try OS-installed Book Antiqua (cross-platform)
-    book_antiqua_names = [
-        "Book Antiqua",
-        "BookAntiqua",
-        "Book Antiqua Regular",
-        "BkAntiqua",
-    ]
-
-    for font_name in book_antiqua_names:
-        try:
-            font = ImageFont.truetype(font_name, font_size)
-            return font
-        except OSError:
-            continue
-
-    # Tier 3: Fall back to Pillow default
-    print(
-        "Warning: Using Pillow default font (Book Antiqua not found in project or system)",
-        file=sys.stderr,
-    )
+) -> ImageFont.ImageFont:
+    """Load Pillow default system font."""
     return ImageFont.load_default(size=font_size)
 
 
 def wrap_text(
     lines: list[str],
-    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    font: ImageFont.ImageFont,
     image_width: int,
     draw: ImageDraw.ImageDraw,
 ) -> list[str]:
@@ -200,7 +155,7 @@ def wrap_text(
 
 def calculate_image_dimensions(
     wrapped_lines: list[str],
-    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    font: ImageFont.ImageFont,
     draw: ImageDraw.ImageDraw,
 ) -> tuple[int, int]:
     """Calculate image dimensions using multiline_textbbox()."""
@@ -215,7 +170,7 @@ def calculate_image_dimensions(
 
 def create_text_image(
     wrapped_lines: list[str],
-    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    font: ImageFont.ImageFont,
     image_width: int,
     image_height: int,
 ) -> Image.Image:
@@ -242,8 +197,7 @@ def save_image(image: Image.Image, output_path: str) -> None:
 
 
 def render_pdf_pages(file_path: str, max_width: int, output_folder: str) -> None:
-    """Render each PDF page as PNG, resizing to max_width if needed. Scaling preserves aspect ratio - no content is cropped.
-    """
+    """Render each PDF page as PNG, resizing to max_width if needed. Scaling preserves aspect ratio - no content is cropped."""
     os.makedirs(output_folder, exist_ok=True)
     doc = pymupdf.open(file_path)
     page_count = len(doc)
@@ -335,18 +289,7 @@ def main() -> None:
     print(f"\nProcessing: {input_file}")
     print(f"Found {len(lines)} non-empty lines.")
 
-    # Validate font availability (silent on success)
-    try:
-        load_font_with_fallback(12)
-    except Exception as e:
-        print_error(f"Font validation failed: {e}")
-        sys.exit(1)
-
-    try:
-        font = load_font_with_fallback(font_size)
-    except Exception as e:
-        print_error(f"Failed to load font: {e}")
-        sys.exit(1)
+    font = load_font_with_fallback(font_size)
 
     measure_image = Image.new("RGB", (1, 1))
     measure_draw = ImageDraw.Draw(measure_image)
