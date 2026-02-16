@@ -1,6 +1,6 @@
 # PromptToImage
 
-A Python CLI tool that converts text and markdown files into PNG images. Inspired by the DeepSeek OCR paper, this tool leverages vision tokens—which hold more context per token than text tokens—as a context engineering technique.
+A Python CLI tool that converts text, pdf and markdown files into PNG images. Inspired by the DeepSeek OCR paper, this tool leverages vision tokens—which hold more context per token than text tokens—as a context engineering technique.
 
 ## About
 
@@ -60,12 +60,18 @@ After installation, the `prompt-to-image` command is available from anywhere in 
 
 ### Command-Line Mode
 
+Default usage:
 ```bash
-prompt-to-image <input_file.md|txt> [font_size] [image_width] [output_file]
+prompt-to-image <input_file.md|txt|pdf>
+```
+
+Parameterized usage:
+```bash
+prompt-to-image <input_file.md|txt|pdf> [font_size] [image_width] [output_file]
 ```
 
 **Parameters:**
-- `input_file`: Path to .md or .txt file (required)
+- `input_file`: Path to .md, .txt or .pdf file (required)
 - `font_size`: Font size in pixels, 8-200 (default: 14)
 - `image_width`: Max image width in pixels, 50-10000 (default: 500)
 - `output_file`: Output filename (default: `<input_filename>.png`)
