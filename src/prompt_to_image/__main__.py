@@ -10,12 +10,13 @@ import pymupdf
 
 MARGIN = 2
 SPACING = 2
-TEXT_OFFSET = 1
 BG_COLOR = "#FFFFFF"
 TEXT_COLOR = "#000000"
 VALID_EXTENSIONS = [".md", ".txt", ".pdf"]
 DEFAULT_FONT_SIZE = 14
 DEFAULT_IMAGE_WIDTH = 500
+MAX_HEIGHT_RATIO = 2.5
+MIN_CHUNK_RATIO = 0.05
 
 
 def print_error(message: str | None) -> None:
@@ -157,15 +158,18 @@ def calculate_image_dimensions(
     wrapped_lines: list[str],
     font: ImageFont.ImageFont,
     draw: ImageDraw.ImageDraw,
-) -> tuple[int, int]:
+) -> tuple[int, int, tuple[float, float, float, float]]:
     """Calculate image dimensions using multiline_textbbox()."""
     if not wrapped_lines:
-        return (50 + MARGIN, 50 + MARGIN)
+        return (50 + MARGIN * 2, 50 + MARGIN * 2, (0, 0, 0, 0))
 
     text = "\n".join(wrapped_lines)
     bbox = draw.multiline_textbbox((0, 0), text, font=font, spacing=SPACING)
 
-    return (math.ceil(bbox[2] - bbox[0]) + MARGIN, math.ceil(bbox[3] + MARGIN))
+    width = math.ceil(bbox[2] - bbox[0] + 2 * MARGIN)
+    height = math.ceil(bbox[3] - bbox[1] + 2 * MARGIN)
+
+    return (width, height, bbox)
 
 
 def create_text_image(
@@ -173,14 +177,17 @@ def create_text_image(
     font: ImageFont.ImageFont,
     image_width: int,
     image_height: int,
+    text_bbox: tuple[float, float, float, float],
 ) -> Image.Image:
     """Create image with white background and render text."""
     image = Image.new("RGB", (image_width, image_height), color=BG_COLOR)
     draw = ImageDraw.Draw(image)
 
     text = "\n".join(wrapped_lines)
+    text_x = MARGIN - text_bbox[0]
+    text_y = MARGIN - text_bbox[1]
     draw.multiline_text(
-        (TEXT_OFFSET, TEXT_OFFSET), text, font=font, fill=TEXT_COLOR, spacing=SPACING
+        (text_x, text_y), text, font=font, fill=TEXT_COLOR, spacing=SPACING
     )
 
     return image
@@ -194,6 +201,124 @@ def save_image(image: Image.Image, output_path: str) -> None:
         raise Exception(f"Permission denied: Cannot write to {output_path}")
     except Exception as e:
         raise Exception(f"Failed to save image: {e}")
+
+
+def calculate_optimal_lines_per_slice(
+    wrapped_lines: list[str],
+    font: ImageFont.ImageFont,
+    draw: ImageDraw.ImageDraw,
+    max_height: int,
+) -> int:
+    """Find maximum lines that fit within max_height via iterative testing."""
+    if not wrapped_lines:
+        return 0
+
+    total_lines = len(wrapped_lines)
+    test_lines = min(total_lines, 100)
+
+    while test_lines <= total_lines:
+        test_text = "\n".join(wrapped_lines[:test_lines])
+        bbox = draw.multiline_textbbox((0, 0), test_text, font=font, spacing=SPACING)
+        height = math.ceil(bbox[3] - bbox[1] + 2 * MARGIN)
+
+        if height <= max_height:
+            if test_lines == total_lines:
+                return test_lines
+            test_lines += 10
+        else:
+            while test_lines > 0:
+                test_text = "\n".join(wrapped_lines[:test_lines])
+                bbox = draw.multiline_textbbox(
+                    (0, 0), test_text, font=font, spacing=SPACING
+                )
+                height = math.ceil(bbox[3] - bbox[1] + 2 * MARGIN)
+
+                if height <= max_height:
+                    return test_lines
+                test_lines -= 1
+            return test_lines
+
+    return total_lines
+
+
+def split_lines_into_chunks(
+    wrapped_lines: list[str],
+    font: ImageFont.ImageFont,
+    draw: ImageDraw.ImageDraw,
+    max_width: int,
+    max_height: int,
+) -> list[list[str]]:
+    """Greedy packing of lines into chunks that fit within max_height."""
+    if not wrapped_lines:
+        return []
+
+    max_lines = calculate_optimal_lines_per_slice(wrapped_lines, font, draw, max_height)
+    chunks: list[list[str]] = []
+    remaining_lines = wrapped_lines[:]
+
+    while remaining_lines:
+        candidate_size = min(max_lines, len(remaining_lines))
+        chunk = remaining_lines[:candidate_size]
+
+        chunk_width, chunk_height, chunk_bbox = calculate_image_dimensions(
+            chunk, font, draw
+        )
+
+        while chunk_height > max_height and len(chunk) > 1:
+            candidate_size -= 1
+            chunk = remaining_lines[:candidate_size]
+            chunk_width, chunk_height, chunk_bbox = calculate_image_dimensions(
+                chunk, font, draw
+            )
+
+        chunks.append(chunk)
+        remaining_lines = remaining_lines[len(chunk) :]
+
+    if len(chunks) > 1:
+        last_chunk_width, last_chunk_height, last_chunk_bbox = (
+            calculate_image_dimensions(chunks[-1], font, draw)
+        )
+
+        if last_chunk_height < max_height * MIN_CHUNK_RATIO:
+            chunks[-2].extend(chunks[-1])
+            chunks.pop()
+
+    return chunks
+
+
+def generate_output_paths(
+    output_file: str,
+    num_images: int,
+) -> list[str]:
+    """Generate output paths for single or multiple images."""
+    if num_images == 1:
+        return [output_file]
+
+    base_name = output_file
+    if base_name.lower().endswith(".png"):
+        base_name = base_name[:-4]
+
+    return [f"{base_name}_part_{i}.png" for i in range(1, num_images + 1)]
+
+
+def build_chunk_with_navigation(
+    chunk_lines: list[str],
+    chunk_index: int,
+    total_chunks: int,
+    output_paths: list[str],
+) -> list[str]:
+    """Add navigation lines to chunk: top from previous, bottom to next."""
+    augmented = chunk_lines.copy()
+
+    if chunk_index > 1:
+        prev_file = os.path.basename(output_paths[chunk_index - 2])
+        augmented.insert(0, f"[continued from {prev_file}]")
+
+    if chunk_index < total_chunks:
+        next_file = os.path.basename(output_paths[chunk_index])
+        augmented.append(f"[continue to {next_file}]")
+
+    return augmented
 
 
 def render_pdf_pages(file_path: str, max_width: int, output_folder: str) -> None:
@@ -300,17 +425,48 @@ def main() -> None:
         print_error("No text to render after processing.")
         sys.exit(1)
 
-    image_width, image_height = calculate_image_dimensions(
+    image_width, image_height, text_bbox = calculate_image_dimensions(
         wrapped_lines, font, measure_draw
     )
 
     print(f"Image dimensions: {image_width}x{image_height} pixels")
     print(f"Rendering {len(wrapped_lines)} lines...")
 
+    max_height = int(image_width * MAX_HEIGHT_RATIO)
+
     try:
-        image = create_text_image(wrapped_lines, font, image_width, image_height)
-        save_image(image, output_file)
-        print(f"\nSuccess! Image saved to: {output_file}")
+        if image_height <= max_height:
+            image = create_text_image(
+                wrapped_lines, font, image_width, image_height, text_bbox
+            )
+            save_image(image, output_file)
+            print(f"\nSuccess! Image saved to: {output_file}")
+        else:
+            print(
+                f"Image too tall ({image_height}px). Splitting into multiple images..."
+            )
+
+            line_chunks = split_lines_into_chunks(
+                wrapped_lines, font, measure_draw, image_width, max_height
+            )
+            output_paths = generate_output_paths(output_file, len(line_chunks))
+
+            for i, chunk in enumerate(line_chunks, 1):
+                chunk_with_nav = build_chunk_with_navigation(
+                    chunk, i, len(line_chunks), output_paths
+                )
+                chunk_width, chunk_height, chunk_bbox = calculate_image_dimensions(
+                    chunk_with_nav, font, measure_draw
+                )
+                chunk_image = create_text_image(
+                    chunk_with_nav, font, chunk_width, chunk_height, chunk_bbox
+                )
+                save_image(chunk_image, output_paths[i - 1])
+                print(
+                    f"Saved part {i}/{len(line_chunks)}: {output_paths[i - 1]} ({chunk_width}x{chunk_height})"
+                )
+
+            print(f"\nSuccess! {len(line_chunks)} images saved.")
     except Exception as e:
         print_error(str(e))
         sys.exit(1)
